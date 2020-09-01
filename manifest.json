@@ -1,0 +1,17 @@
+{
+  "name": "Scribbl.io Companion",
+  "version": "1.0",
+  "description": "Companion for scribbl.io",
+  "manifest_version": 2,
+  "content_scripts": [
+    {
+      "matches": [
+        "https://skribbl.io/*"
+      ],
+      "js": [
+        "lib/jquery.js",
+        "src/app.js"
+      ]
+    }
+  ]
+}
