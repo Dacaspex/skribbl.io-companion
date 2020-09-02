@@ -10,7 +10,8 @@
       ],
       "js": [
         "lib/jquery.js",
-        "src/app.js"
+        "src/app.js",
+        "src/app.css"
       ]
     }
   ]

@@ -153,13 +153,24 @@ const Companion = {
         historyContainerNode.style.maxWidth = '1400px';
 
         const historyTitleNode = document.createElement('h2');
-        historyTitleNode.textContent = 'Wall of shame';
+        historyTitleNode.textContent = 'Previous drawings';
         historyTitleNode.style.color = '#ffffff';
         historyTitleNode.style.marginBottom = '15px';
+
+        const buttonContainer = ElementFactory.createDiv(IdRegister.companion.historyButtonContainer);
+        buttonContainer.style.marginBottom = '10px';
+
+        const clearButton = document.createElement('span');
+        clearButton.style.color = '#ffffff';
+        clearButton.textContent = 'Clear previous drawings';
+        clearButton.onclick = () => Companion.clearHistory();
+
+        buttonContainer.appendChild(clearButton);
 
         const entriesContainer = ElementFactory.createDiv(IdRegister.companion.historyEntriesContainer);
 
         historyContainerNode.appendChild(historyTitleNode);
+        historyContainerNode.appendChild(buttonContainer);
         historyContainerNode.appendChild(entriesContainer);
 
         const outerContainer = document.querySelector('.container-fluid');
@@ -167,6 +178,11 @@ const Companion = {
         insertNodeAfter(historyContainerNode, outerContainer);
 
         this.initialised = true;
+    },
+
+    clearHistory: function() {
+        this.historyEntries = [];
+        this.render();
     },
 
     saveDrawing: function (canvasNode) {
@@ -214,23 +230,21 @@ const ElementFactory = {
         canvas.style.marginRight = '10px';
         canvas.setAttribute('companion-history-entry', 'true');
 
-        const ctx = canvas.getContext('2d');
-        // TODO: Figure out why this weird scaling of the destination is required???
-        // TODO: Derive source width and height from source canvas/context
-        ctx.drawImage(sourceCanvas, 0, 0, 800, 600, 0, 0, 300, 150);
+        canvas.width = 200;
+        canvas.height = 150;
 
-        // TODO: Make canvas clickable and add functionality to copy contents to clipboard
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(sourceCanvas, 0, 0, 800, 600, 0, 0, 200, 150);
 
         return canvas;
     },
 };
 
 const IdRegister = {
-    companionPrefix: 'companion__',
-
     companion: {
-        historyContainer: this.companionPrefix + 'companion__history-container',
-        historyEntriesContainer: this.companionPrefix + 'history-entries-container'
+        historyContainer: 'companion__history-container',
+        historyButtonContainer: 'companion-history-button-container',
+        historyEntriesContainer: 'companion__history-entries-container'
     }
 };
 
