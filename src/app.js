@@ -18,6 +18,8 @@ function run() {
     // Detect page content
     const screenNode = Scribbl.getActiveScreenNode();
 
+    runGame();
+
     switch (screenNode.id) {
         case Scribbl.SCREEN_GAME:
             runGame();
@@ -31,6 +33,8 @@ function runGame() {
     // Overview of functionality:
     // - Update score graph
     // - Save previous drawings
+
+    Companion.initialise();
 
     // 0. Check if game state is REVEAL
     Scribbl.recordGameState();
@@ -53,7 +57,7 @@ function runGame() {
     // ==== Drawing
     // 1. Get canvas data
     const sourceCanvasNode = Scribbl.getCanvasNode();
-    Companion.saveDrawing(sourceCanvasNode);
+    Companion.saveRound(sourceCanvasNode);
 
     // 2. Copy canvas data to history
 
@@ -140,53 +144,83 @@ const Scribbl = {
 };
 
 const Companion = {
+    HISTORY_MAX_SIZE: 5,
     initialised: false,
-    historyEntries: [],
+    rounds: [],
 
     initialise: function () {
         if (this.initialised) return;
 
         Debug.log('Initialising render');
 
-        const historyContainerNode = ElementFactory.createDiv(IdRegister.companion.historyContainer);
-        historyContainerNode.style.margin = '0 auto';
-        historyContainerNode.style.maxWidth = '1400px';
+        // Inject css file
+        // See https://stackoverflow.com/q/11553600/2878894
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.type = 'text/css';
+        cssLink.href = chrome.extension.getURL("src/app.css");
+        document.head.appendChild(cssLink);
 
-        const historyTitleNode = document.createElement('h2');
+        // History
+        const historyContainerNode = ElementFactory.create('div', 'companion__history-container');
+        const historyHeaderContainer = ElementFactory.create('div', 'companion-history-header-container');
+
+        const historyTitleNode = ElementFactory.create('h2', 'companion__history-title');
         historyTitleNode.textContent = 'Previous drawings';
-        historyTitleNode.style.color = '#ffffff';
-        historyTitleNode.style.marginBottom = '15px';
 
-        const buttonContainer = ElementFactory.createDiv(IdRegister.companion.historyButtonContainer);
-        buttonContainer.style.marginBottom = '10px';
-
-        const clearButton = document.createElement('span');
-        clearButton.style.color = '#ffffff';
+        const clearButton = ElementFactory.create('span', 'companion__history-clear-button');
         clearButton.textContent = 'Clear previous drawings';
         clearButton.onclick = () => Companion.clearHistory();
 
-        buttonContainer.appendChild(clearButton);
+        historyHeaderContainer.appendChild(historyTitleNode);
+        historyHeaderContainer.appendChild(clearButton);
 
-        const entriesContainer = ElementFactory.createDiv(IdRegister.companion.historyEntriesContainer);
+        const entriesContainer = ElementFactory.create('div', IdRegister.companion.historyEntriesContainer);
 
-        historyContainerNode.appendChild(historyTitleNode);
-        historyContainerNode.appendChild(buttonContainer);
+        historyContainerNode.appendChild(historyHeaderContainer);
         historyContainerNode.appendChild(entriesContainer);
 
         const outerContainer = document.querySelector('.container-fluid');
 
         insertNodeAfter(historyContainerNode, outerContainer);
 
+        // Overlay image viewer
+        const overlayContainer = ElementFactory.create('div', 'companion__overlay-container');
+        overlayContainer.classList.add('companion__hidden');
+        overlayContainer.onclick = () => {
+            overlayContainer.classList.add('companion__hidden');
+        };
+
+        const overlayCanvasContainer = ElementFactory.create('div', 'companion__overlay-canvas-container');
+        const overlayCanvas = ElementFactory.create('canvas', 'companion__overlay-canvas');
+        overlayCanvas.width = 800;
+        overlayCanvas.height = 600;
+
+        overlayCanvasContainer.appendChild(overlayCanvas);
+        overlayContainer.appendChild(overlayCanvasContainer);
+
+        const bodyNode = document.getElementsByTagName('body')[0];
+        bodyNode.appendChild(overlayContainer);
+
         this.initialised = true;
     },
 
-    clearHistory: function() {
-        this.historyEntries = [];
+    clearHistory: function () {
+        this.rounds = []; // TODO: Reimplement, the round information should be kept
         this.render();
     },
 
-    saveDrawing: function (canvasNode) {
-        this.historyEntries.push(ElementFactory.createHistoryEntry(canvasNode));
+    saveRound: function (canvasNode) {
+        // Cloning a canvas does not copy the canvas contents unfortunately :(
+        const copy = canvasNode.cloneNode();
+        const copyCtx = copy.getContext('2d');
+        copyCtx.drawImage(canvasNode, 0, 0);
+
+        this.rounds.unshift({
+            canvas: copy,
+            historyCanvas: ElementFactory.createHistoryEntry(canvasNode),
+            name: null,
+        })
     },
 
     savePoints: function () {
@@ -204,23 +238,34 @@ const Companion = {
             entry.remove();
         });
 
-        // TODO: Draw at most x
-
         const historyEntriesContainer = document.getElementById(IdRegister.companion.historyEntriesContainer);
-        this.historyEntries.forEach(entry => {
-            historyEntriesContainer.appendChild(entry);
-        });
 
-        // TODO: Update score graph
+        // Draw the drawings from the last x rounds
+        this.rounds.slice(0, this.HISTORY_MAX_SIZE).forEach(round => {
+            const historyCanvas = round.historyCanvas;
+
+            historyCanvas.onclick = () => {
+                // Make overlay visible
+                const overlayContainer = document.getElementById('companion__overlay-container');
+                overlayContainer.classList.remove('companion__hidden');
+
+                // Copy canvas data -- display this specific on the overlay canvas
+                const overlayCanvas = document.getElementById('companion__overlay-canvas');
+                const overlayCtx = overlayCanvas.getContext('2d');
+                overlayCtx.drawImage(round.canvas, 0, 0);
+            };
+
+            historyEntriesContainer.appendChild(historyCanvas);
+        });
     },
 };
 
 const ElementFactory = {
-    createDiv: function (id) {
-        const div = document.createElement('div');
-        div.id = id;
+    create: function (type, id) {
+        const element = document.createElement(type);
+        element.id = id;
 
-        return div;
+        return element;
     },
 
     createHistoryEntry: function (sourceCanvas) {
@@ -229,7 +274,6 @@ const ElementFactory = {
         canvas.style.height = '150px';
         canvas.style.marginRight = '10px';
         canvas.setAttribute('companion-history-entry', 'true');
-
         canvas.width = 200;
         canvas.height = 150;
 

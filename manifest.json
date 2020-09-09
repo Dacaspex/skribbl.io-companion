@@ -8,11 +8,16 @@
       "matches": [
         "https://skribbl.io/*"
       ],
+      "css": [
+        "src/app.css"
+      ],
       "js": [
         "lib/jquery.js",
-        "src/app.js",
-        "src/app.css"
+        "src/app.js"
       ]
     }
+  ],
+  "web_accessible_resources": [
+    "src/app.css"
   ]
 }

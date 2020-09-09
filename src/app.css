@@ -1,4 +1,45 @@
 
-#companion-history-button-container > span:hover {
-    text-decoration: underline;
+/* Utility */
+.companion__hidden {
+    display: none;
+}
+
+
+#companion__history-container {
+    margin: 0 auto;
+    max-width: 1400px;
+}
+
+#companion__history-title {
+    display: inline-block;
+    color: #ffffff;
+    margin-bottom: 15px;
+    margin-right: 20px;
+}
+
+#companion__history-clear-button {
+    color: #ffffff;
+    cursor: pointer;
+}
+
+#companion__history-clear-button:hover {
+    text-decoration: underline !important;
+}
+
+/* Overlay */
+#companion__overlay-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(.7, .7, .7, .6);
+    z-index: 1000;
+}
+
+#companion__overlay-canvas-container {
+    width: 800px;
+    height: 600px;
+    margin: 100px auto 0 auto;
+    background-color: #ffffff;
 }
