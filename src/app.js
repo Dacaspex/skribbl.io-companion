@@ -153,7 +153,7 @@ const Companion = {
 
         Debug.log('Initialising render');
 
-        // Inject css file
+        // Inject link element such that we can import our own css file
         // See https://stackoverflow.com/q/11553600/2878894
         const cssLink = document.createElement('link');
         cssLink.rel = 'stylesheet';
@@ -161,7 +161,7 @@ const Companion = {
         cssLink.href = chrome.extension.getURL("src/app.css");
         document.head.appendChild(cssLink);
 
-        // History
+        // Setup history components
         const historyContainerNode = ElementFactory.create('div', 'companion__history-container');
         const historyHeaderContainer = ElementFactory.create('div', 'companion-history-header-container');
 
@@ -184,7 +184,7 @@ const Companion = {
 
         insertNodeAfter(historyContainerNode, outerContainer);
 
-        // Overlay image viewer
+        // Setup overlay image viewer
         const overlayContainer = ElementFactory.create('div', 'companion__overlay-container');
         overlayContainer.classList.add('companion__hidden');
         overlayContainer.onclick = () => {
@@ -206,7 +206,9 @@ const Companion = {
     },
 
     clearHistory: function () {
-        this.rounds = []; // TODO: Reimplement, the round information should be kept
+        this.rounds.forEach(round => {
+            round.computed.history.available = false;
+        });
         this.render();
     },
 
@@ -216,15 +218,27 @@ const Companion = {
         const copyCtx = copy.getContext('2d');
         copyCtx.drawImage(canvasNode, 0, 0);
 
-        this.rounds.unshift({
+        // Save round data
+        this.rounds.push({
             canvas: copy,
-            historyCanvas: ElementFactory.createHistoryEntry(canvasNode),
             name: null,
-        })
-    },
+            computed: {
+                history: {
+                    // A (smaller) copy of the original canvas
+                    canvas: ElementFactory.createHistoryEntry(canvasNode),
+                    // Whether this history item should be rendered or not
+                    available: true,
+                }
+            }
+        });
 
-    savePoints: function () {
-
+        // We have a maximum history window, so update the previous rounds that fall out
+        // of that window
+        this.rounds
+            .slice(0, this.rounds.length - this.HISTORY_MAX_SIZE)
+            .forEach(round => {
+                round.computed.history.available = false;
+            });
     },
 
     render: function () {
@@ -240,9 +254,9 @@ const Companion = {
 
         const historyEntriesContainer = document.getElementById(IdRegister.companion.historyEntriesContainer);
 
-        // Draw the drawings from the last x rounds
-        this.rounds.slice(0, this.HISTORY_MAX_SIZE).forEach(round => {
-            const historyCanvas = round.historyCanvas;
+        // Draw the available history entries
+        this.rounds.filter(round => round.computed.history.available).forEach(round => {
+            const historyCanvas = round.computed.history.canvas;
 
             historyCanvas.onclick = () => {
                 // Make overlay visible
